@@ -172,7 +172,9 @@ call as things can change quite quickly, of course.
 This collection of contracts have 3 validators,
 
 Token Minting Policy - Mints or burns assets
+
 Reference Token Locking Validator - stores the refToken with its associated Datum
+
 Distribution Validator - holds the fractionalised user assets representing a bottle of 
 wine for each token
 
