@@ -80,6 +80,109 @@ aiken check
 
 ---
 
+## Using The Contracts
+
+To use the contracts you will need to apply the script parameters to the validator output 
+of `plutus.json` when you build the contracts.
+
+Because i have tested the offchain code by running it as a script, they are applied and 
+assigned to constants at the top of the file:
+
+```
+
+...
+
+const mint = await readMintValidator()
+
+...
+
+async function readMintValidator(): Promise<MintingPolicy> {
+  const validator = JSON.parse(await Deno.readTextFile("plutus.json")).validators[2];
+  return {
+    type: "PlutusV2",
+    script: applyParamsToScript(applyDoubleCborEncoding(validator.compiledCode), [ownerPKH]),
+  };
+}
+
+...
+
+```
+
+`ownerPKH` will be the pubkeyHash of the infrastructure wallet.
+
+---
+
+## Setting Data
+
+data for transactions will need to be done dynamically but we create things in the 
+following manner:
+
+```
+
+...
+
+const lAddress = lucid.utils.validatorToAddress(lock) 
+
+const lDatum = Data.to(
+  new Constr(0, [
+    new Constr(0, [
+      fromText("Rioja"),
+      fromText("image"),
+      fromText("ipfsHere"), // image IPFS wink
+      fromText("newTrackingData") // supply chain data IPFS link
+    ])
+  ]),
+  new Constr(1, [BigInt(0)]) // this is the metadata version so we need to increment this every update
+)
+
+const lockHash = lucid.utils.getAddressDetails(lAddress).paymentCredential.hash
+
+...
+
+```
+
+This gets the address of the `lock` validator, `lDatum` is the wine metadata held at the 
+utxo ( you need to construct it from this template ) and finally `lockHash` is the 
+validator script credential.
+
+The redeemers further down are used to execute certain kinds of validation and so need to maintain the basic structure they are in. 
+
+`tokenName` can be a variable applied to each NFT, no duplicates.
+to update the tracking data use `updateRedeemer` with the `newTrackingData` as an IPFS 
+link.
+
+---
+
+## Transaction Code
+
+at the bottom of `wine.ts` we have the final transaction calls for each operation of the 
+smart contracts.
+
+Each of these will need to be separate functions applied when needed to mint new wine 
+assets, burn exuisting ones, update the tracking data and purchasing the wine.
+
+When you are using these in the backend they will often have to process the incoming data 
+or lookup information on the blockchain so that will have to be gathered at the function 
+call as things can change quite quickly, of course.
+
+---
+
+## The Validators
+
+This collection of contracts have 3 validators,
+
+Token Minting Policy - Mints or burns assets
+Reference Token Locking Validator - stores the refToken with its associated Datum
+Distribution Validator - holds the fractionalised user assets representing a bottle of 
+wine for each token
+
+The helper functions allow us to minimise the code of repeat tasks and the tests verify 
+the functionality of the code.
+
+We also have some test tools in `lib` for creating dummy data and types.
+
+---
+
 ## TODO
 
 I need to optimise these contracts to increase throughput (so we can update multiple 
